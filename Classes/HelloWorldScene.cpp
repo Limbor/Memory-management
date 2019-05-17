@@ -1,7 +1,6 @@
 #include "HelloWorldScene.h"
 #include "SimpleAudioEngine.h"
-
-USING_NS_CC;
+#include "ui\CocosGUI.h"
 
 Scene* HelloWorld::createScene()
 {
@@ -15,99 +14,113 @@ static void problemLoading(const char* filename)
     printf("Depending on how you compiled you might have to add 'Resources/' in front of filenames in HelloWorldScene.cpp\n");
 }
 
-// on "init" you need to initialize your instance
 bool HelloWorld::init()
 {
-    //////////////////////////////
-    // 1. super init first
     if ( !Scene::init() )
     {
         return false;
     }
+	auto backgroud = LayerColor::create(Color4B::WHITE);
+	this->addChild(backgroud);
 
-    auto visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+	addEndButton();
 
-    /////////////////////////////
-    // 2. add a menu item with "X" image, which is clicked to quit the program
-    //    you may modify it.
+	auto memory = DrawNode::create();
+	memory->drawRect(Vec2(800, 70), Vec2(1000, 710), Color4F::BLACK);
+	this->addChild(memory);
 
-    // add a "close" icon to exit the progress. it's an autorelease object
-    auto closeItem = MenuItemImage::create(
-                                           "CloseNormal.png",
-                                           "CloseSelected.png",
-                                           CC_CALLBACK_1(HelloWorld::menuCloseCallback, this));
+	addBlock();
 
-    if (closeItem == nullptr ||
-        closeItem->getContentSize().width <= 0 ||
-        closeItem->getContentSize().height <= 0)
-    {
-        problemLoading("'CloseNormal.png' and 'CloseSelected.png'");
-    }
-    else
-    {
-        float x = origin.x + visibleSize.width - closeItem->getContentSize().width/2;
-        float y = origin.y + closeItem->getContentSize().height/2;
-        closeItem->setPosition(Vec2(x,y));
-    }
-
-    // create menu, it's an autorelease object
-    auto menu = Menu::create(closeItem, NULL);
-    menu->setPosition(Vec2::ZERO);
-    this->addChild(menu, 1);
-
-    /////////////////////////////
-    // 3. add your codes below...
-
-    // add a label shows "Hello World"
-    // create and initialize a label
-
-    auto label = Label::createWithTTF("Hello World", "fonts/Marker Felt.ttf", 24);
-    if (label == nullptr)
-    {
-        problemLoading("'fonts/Marker Felt.ttf'");
-    }
-    else
-    {
-        // position the label on the center of the screen
-        label->setPosition(Vec2(origin.x + visibleSize.width/2,
-                                origin.y + visibleSize.height - label->getContentSize().height));
-
-        // add the label as a child to this layer
-        this->addChild(label, 1);
-    }
-
-    // add "HelloWorld" splash screen"
-    auto sprite = Sprite::create("HelloWorld.png");
-    if (sprite == nullptr)
-    {
-        problemLoading("'HelloWorld.png'");
-    }
-    else
-    {
-        // position the sprite on the center of the screen
-        sprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
-
-        // add the sprite as a child to this layer
-        this->addChild(sprite, 0);
-    }
+	auto next = ui::Button::create("CloseNormal.png", "CloseSelected.png");
+	next->setPosition(Vec2(500 - next->getContentSize().width / 2, 410 - next->getContentSize().height / 2));
+	next->addClickEventListener(CC_CALLBACK_1(HelloWorld::nextCallback, this));
+	this->addChild(next);
     return true;
+}
+
+void HelloWorld::addBlock() {
+	if (!ds->processList.empty()) {
+		if (ds->processList.front()->order == DynamicScheduler::APPLY) {
+			int id = ds->processList.front()->id;
+			int size = ds->processList.front()->size;
+			auto block = DrawNode::create();
+			block->drawSolidRect(Vec2(50, 410 - size / 2), Vec2(250, 410 + size / 2), colors[colorOrder]);
+			colorOrder = (colorOrder + 1) % 7;
+			block->setTag(id);
+			auto idNumber = Label::createWithSystemFont(String::createWithFormat("%i", id)->getCString(), "Arial", 30);
+			idNumber->setPosition(150,410);
+			idNumber->setColor(Color3B::WHITE);
+			block->addChild(idNumber);
+			this->addChild(block);
+		}
+	}
 }
 
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
 {
-    //Close the cocos2d-x game scene and quit the application
     Director::getInstance()->end();
-
-    #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
     exit(0);
 #endif
+}
 
-    /*To navigate back to native iOS screen(if present) without quitting the application  ,do not use Director::getInstance()->end() and exit(0) as given above,instead trigger a custom event created in RootViewController.mm as below*/
+void HelloWorld::nextCallback(Ref * pSender)
+{
+	Message *m = ds->allocate();
+	if (m == NULL) {
+		ui::Button *b = (ui::Button*)pSender;
+		b->setEnabled(true);
+		return;
+	}
+	addBlock();
+	if (m->order == DynamicScheduler::APPLY) {
+		DrawNode *d = (DrawNode*)getChildByTag(m->id);
+		MoveTo *move = MoveTo::create(1.0, Vec2(750, 300 - (m->end - m->start) / 2 - m->start));
+		d->runAction(move);
+		if (number[m->start] == 0) {
+			auto startNumber = Label::createWithSystemFont(String::createWithFormat("%i", m->start)->getCString(), "Arial", 18);
+			startNumber->setPosition(750, 710 - m->start);
+			startNumber->setColor(Color3B::BLACK);
+			startNumber->setTag(100 + m->start);
+			this->addChild(startNumber);
+		}
+		number[m->start]++;
+		if (number[m->end] == 0) {
+			auto endNumber = Label::createWithSystemFont(String::createWithFormat("%i", m->end)->getCString(), "Arial", 18);
+			endNumber->setPosition(750, 710 - m->end);
+			endNumber->setColor(Color3B::BLACK);
+			endNumber->setTag(100 + m->end);
+			this->addChild(endNumber);
+		}
+		number[m->end]++;
+	}
+	else {
+		DrawNode *d = (DrawNode*)getChildByTag(m->id);
+		MoveTo *move = MoveTo::create(1, Vec2(d->getPosition().x + 500, d->getPosition().y));
+		d->runAction(move);
+		Label *startNumber = (Label*)getChildByTag(100 + m->start);
+		Label *endNumber = (Label*)getChildByTag(100 + m->end);
+		number[m->start]--;
+		if (number[m->start] == 0) {
+			startNumber->removeFromParent();
+		}
+		number[m->end]--;
+		if (number[m->end] == 0) {
+			endNumber->removeFromParent();
+		}
+	}
+}
 
-    //EventCustom customEndEvent("game_scene_close_event");
-    //_eventDispatcher->dispatchEvent(&customEndEvent);
-
-
+void HelloWorld::addEndButton()
+{
+	auto closeItem = MenuItemImage::create("CloseNormal.png",
+										   "CloseSelected.png",
+										   CC_CALLBACK_1(HelloWorld::menuCloseCallback, this));
+	float x = origin.x + visibleSize.width - closeItem->getContentSize().width / 2;
+	float y = origin.y + closeItem->getContentSize().height / 2;
+	closeItem->setPosition(Vec2(x, y));
+	auto menu = Menu::create(closeItem, NULL);
+	menu->setPosition(Vec2::ZERO);
+	this->addChild(menu, 1);
 }
