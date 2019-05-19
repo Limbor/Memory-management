@@ -45,6 +45,7 @@ public:
 	void insertWorkingBlock(Block *b);
 	void insertFreeBlock(Block *b);
 	void mergeFreeBlock();
+	int getMethod() { return method; }
 	~DynamicScheduler();
 };
 

@@ -6,23 +6,26 @@
 
 USING_NS_CC;
 
-class HelloWorld : public cocos2d::Scene
+class DynamicScene : public cocos2d::Scene
 {
 private:
 	Size visibleSize = Director::getInstance()->getVisibleSize();
 	Vec2 origin = Director::getInstance()->getVisibleOrigin();
 	int colorOrder = 0;
+	int orderNumber = 1;
 	int number[641] = { 0 };
-	DynamicScheduler *ds = new DynamicScheduler(DynamicScheduler::BEST);
+	DynamicScheduler *ds;
 	Color4F colors[7] = { Color4F::BLACK,Color4F::BLUE,Color4F::RED,Color4F::YELLOW,Color4F::GRAY,Color4F::GREEN,Color4F::ORANGE };
 public:
-    static cocos2d::Scene* createScene();
+    static DynamicScene* createScene(int method);
     virtual bool init();
+	void enemyInit(int method);
 	void addBlock();
+	void addProcess();
     void menuCloseCallback(Ref* pSender);
 	void nextCallback(Ref *pSender);
 	void addEndButton();
-    CREATE_FUNC(HelloWorld);
+    CREATE_FUNC(DynamicScene);
 };
 
 #endif // __HELLOWORLD_SCENE_H__
