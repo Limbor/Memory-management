@@ -12,6 +12,7 @@ private:
 	Size visibleSize = Director::getInstance()->getVisibleSize();
 	Vec2 origin = Director::getInstance()->getVisibleOrigin();
 	int method;
+	float speed = 1.0f;
 	bool run = false;
 	bool finish = false;
 	PageScheduler *ps;
@@ -21,6 +22,7 @@ private:
 	Label *currentNumber;
 	Label *currentInstruction;
 	Label *insLocation;
+	Label *speedTime;
 public:
 	static PageScene* createScene(int method, int *sequence);
 	virtual bool init();

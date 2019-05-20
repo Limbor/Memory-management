@@ -57,7 +57,7 @@ void PageScene::enemyInit(int method, int *sequence)
 	currentInstruction->setPosition(450, 700);
 	this->addChild(currentInstruction);
 
-	pageFaultRate = Label::createWithSystemFont(String::createWithFormat("PageMissingRate:%f%%", 0.0)->getCString(), "Arial", 30);
+	pageFaultRate = Label::createWithSystemFont(String::createWithFormat("PageMissingRate:%.4f%%", 0.0)->getCString(), "Arial", 30);
 	pageFaultRate->setColor(Color3B::BLACK);
 	pageFaultRate->setPosition(800, 750);
 	this->addChild(pageFaultRate);
@@ -72,9 +72,10 @@ void PageScene::enemyInit(int method, int *sequence)
 				PageScene* scene = PageScene::createScene(PageScheduler::LRUM, ps->sequence);
 				Director::getInstance()->replaceScene(scene);
 			}
+			return;
 		}
 		if (!run) {
-			schedule(schedule_selector(PageScene::nextInstruction), 0.1f);
+			schedule(schedule_selector(PageScene::nextInstruction), speed);
 			hint->setString("Pause");
 			run = true;
 		}
@@ -90,6 +91,35 @@ void PageScene::enemyInit(int method, int *sequence)
 	hint->setPosition(590, 50);
 	hint->setColor(Color3B::BLACK);
 	this->addChild(hint);
+
+	speedTime = Label::createWithSystemFont(String::createWithFormat("%.1fX", 1.0f / speed)->getCString(), "Arial", 30);
+	speedTime->setColor(Color3B::BLACK);
+	speedTime->setPosition(900, 50);
+	this->addChild(speedTime);
+
+	auto fast = ui::Button::create("right.png");
+	fast->setPosition(Vec2(800, 50));
+	fast->addClickEventListener([&](Ref* psender) {
+		if (run && speed > 0.1f) {
+			speed /= 2;
+			speedTime->setString(String::createWithFormat("%.1fX", 1.0f / speed)->getCString());
+			unschedule(schedule_selector(PageScene::nextInstruction));
+			schedule(schedule_selector(PageScene::nextInstruction), speed);
+		}
+	});
+	this->addChild(fast);
+
+	auto slow = ui::Button::create("left.png");
+	slow->setPosition(Vec2(700, 50));
+	slow->addClickEventListener([&](Ref* psender) {
+		if (run && speed < 1.0f) {
+			speed *= 2;
+			speedTime->setString(String::createWithFormat("%.1fX", 1.0f / speed)->getCString());
+			unschedule(schedule_selector(PageScene::nextInstruction));
+			schedule(schedule_selector(PageScene::nextInstruction), speed);
+		}
+	});
+	this->addChild(slow);
 }
 
 void PageScene::nextInstruction(float dt)
@@ -111,8 +141,8 @@ void PageScene::nextInstruction(float dt)
 	currentInstruction->setString(String::createWithFormat("%i", ins)->getCString());
 	missingPage->setString(String::createWithFormat("MissingPage:%i", ps->getMissingPage())->getCString());
 	currentNumber->setString(String::createWithFormat("CurrentNumber:%i", ps->getCurrentNumber())->getCString());
-	double rate = (ps->getCurrentNumber() == 0) ? 0 : ((double)ps->getMissingPage() / (double)ps->getCurrentNumber());
-	pageFaultRate->setString(String::createWithFormat("PageMissingRate:%f%%", rate)->getCString());
+	double rate = (ps->getCurrentNumber() == 0) ? 0 : ((double)ps->getMissingPage() / (double)ps->getCurrentNumber()) * 100;
+	pageFaultRate->setString(String::createWithFormat("PageMissingRate:%.4f%%", rate)->getCString());
 
 	if (inf->isFound) {
 		DrawNode *d = (DrawNode*)getChildByTag(inf->oldPage);
