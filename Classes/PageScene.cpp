@@ -26,12 +26,13 @@ bool PageScene::init()
 
 void PageScene::enemyInit(int method, int *sequence)
 {
+	//初始化页面调度器
 	this->method = method;
 	ps = new PageScheduler(method, sequence);
-
+	//添加背景
 	auto backgroud = LayerColor::create(Color4B::WHITE);
 	this->addChild(backgroud);
-
+	//各种标签初始化
 	missingPage = Label::createWithSystemFont(String::createWithFormat("MissingPage:%i", ps->getMissingPage())->getCString(), "Arial", 30);
 	missingPage->setColor(Color3B::BLACK);
 	missingPage->setPosition(150, 750);
@@ -62,8 +63,13 @@ void PageScene::enemyInit(int method, int *sequence)
 	pageFaultRate->setPosition(800, 750);
 	this->addChild(pageFaultRate);
 
-	addEndButton();
+	physicalAddress = Label::createWithSystemFont("PhysicalAddress:", "Arial", 30);
+	physicalAddress->setColor(Color3B::BLACK);
+	physicalAddress->setPosition(150, 50);
+	this->addChild(physicalAddress);
 
+	addEndButton();
+	//开始以及暂停按钮设置
 	auto start = ui::Button::create("next.png");
 	start->setPosition(Vec2(510, 50));
 	start->addClickEventListener([&](Ref* psender) {
@@ -96,7 +102,7 @@ void PageScene::enemyInit(int method, int *sequence)
 	speedTime->setColor(Color3B::BLACK);
 	speedTime->setPosition(900, 50);
 	this->addChild(speedTime);
-
+	//快进和慢放按钮设置
 	auto fast = ui::Button::create("right.png");
 	fast->setPosition(Vec2(800, 50));
 	fast->addClickEventListener([&](Ref* psender) {
@@ -124,57 +130,71 @@ void PageScene::enemyInit(int method, int *sequence)
 
 void PageScene::nextInstruction(float dt)
 {
+	//获取当前执行的指令序号
 	int ins;
 	if(!ps->instructionList.empty()) ins = ps->instructionList.front();
-
+	//获取反馈信息
 	Info *inf;
 	if(method == PageScheduler::FIFOM) inf = ps->FIFO();
 	else inf = ps->LRU();
 	if (inf == NULL) {
+		//为空则标志指令执行完毕 
 		unschedule(schedule_selector(PageScene::nextInstruction));
 		hint->setString("Next");
 		finish = true;
 		return;
 	}
-
+	//更新标签
 	if (insLocation != NULL) insLocation->setColor(Color3B::BLACK);
 	currentInstruction->setString(String::createWithFormat("%i", ins)->getCString());
 	missingPage->setString(String::createWithFormat("MissingPage:%i", ps->getMissingPage())->getCString());
 	currentNumber->setString(String::createWithFormat("CurrentNumber:%i", ps->getCurrentNumber())->getCString());
 	double rate = (ps->getCurrentNumber() == 0) ? 0 : ((double)ps->getMissingPage() / (double)ps->getCurrentNumber()) * 100;
 	pageFaultRate->setString(String::createWithFormat("PageMissingRate:%.4f%%", rate)->getCString());
-
+	//页面更新
+	int address = 0;
 	if (inf->isFound) {
+		//找到页面直接获取物理地址并改变对应指令颜色
 		DrawNode *d = (DrawNode*)getChildByTag(inf->oldPage);
 		insLocation = (Label*)d->getChildByTag(ins - inf->oldPage * 10);
 		insLocation->setColor(Color3B::GREEN);
+		address = inf->position * 10 + ins - inf->oldPage * 10 - 10;
 	}
 	else {
+		//页面不足4页则直接添加页面
 		if (inf->oldPage == -1) {
 			addPage(inf, ins);
 		}
 		else {
+			//删除被替换的页面添加新页面
 			DrawNode *old = (DrawNode*)getChildByTag(inf->oldPage);
 			old->removeFromParent();
 			addPage(inf, ins);
 		}
+		address = inf->position * 10 + ins - inf->newPage * 10 - 10;
 	}
+	//显示物理地址
+	physicalAddress->setString(String::createWithFormat("PhysicalAddress:%i", address)->getCString());
 }
 
 void PageScene::addPage(Info *inf, int ins)
 {
+	//页面边框
 	auto page = DrawNode::create();
 	page->drawRect(Vec2(250 * inf->position - 200, 100), Vec2(250 * inf->position, 600), Color4F::BLACK);
 	page->setTag(inf->newPage);
 	this->addChild(page);
+	//页面编号
 	auto pageNumber = Label::createWithSystemFont(String::createWithFormat("%i", inf->newPage)->getCString(), "Arial", 25);
 	pageNumber->setPosition(inf->position * 250 - 100, 625);
 	pageNumber->setColor(Color3B::BLACK);
 	page->addChild(pageNumber);
+	//包含的指令编号
 	for (int i = 0; i < 10; i++) {
 		auto number = Label::createWithSystemFont(String::createWithFormat("%i", inf->newPage * 10 + i)->getCString(), "Arial", 18);
 		number->setPosition(inf->position * 250 - 100, 125 + i * 50);
 		number->setTag(i);
+		//目标指令设为绿色
 		if (i == (ins - inf->newPage * 10)) {
 			insLocation = number;
 			number->setColor(Color3B::GREEN);
